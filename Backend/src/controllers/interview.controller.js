@@ -10,7 +10,15 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
 
-    const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
+    if (!req.file || !req.file.buffer) {
+        return res.status(400).json({
+            message: "Resume PDF file is required."
+        })
+    }
+
+    const resumeBuffer = Buffer.isBuffer(req.file.buffer) ? req.file.buffer : Buffer.from(req.file.buffer)
+    const resumeUint8 = new Uint8Array(resumeBuffer)
+    const resumeContent = await (new pdfParse.PDFParse(resumeUint8)).getText()
     const { selfDescription, jobDescription } = req.body
 
     const interViewReportByAi = await generateInterviewReport({

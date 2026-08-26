@@ -6,6 +6,11 @@
     padding-block: 0.75rem;
     border-radius: 1rem;
     cursor: pointer;
+    background: transparent;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: none;
 
     transition: all 0.3s ease-in-out;
 
@@ -16,5 +21,23 @@
 
     &:active{
         transform: scale(0.9);
+    }
+
+    &.logout-btn{
+        background: #ff2d78;
+        color: #ffffff;
+        border: none;
+        padding: 0.5rem 0.9rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius:0.5rem;
+
+        &:hover{
+            background: #e1034d;
+        }
+
+        &:active{
+            transform: scale(0.90);
+        }
     }
 }

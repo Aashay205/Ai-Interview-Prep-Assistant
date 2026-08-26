@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../../auth/hooks/useAuth'
 
 const Home = () => {
 
@@ -11,6 +12,7 @@ const Home = () => {
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
+    const { handleLogout } = useAuth()
 
     const handleGenerateReport = async () => {
         const resumeFile = resumeInputRef.current.files[ 0 ]
@@ -27,12 +29,34 @@ const Home = () => {
     }
 
     return (
-        <div className='home-page'>
+        <div className='home-page' style={{ position: 'relative' }}>
+
+            <button
+                onClick={async () => {
+                    try {
+                        await handleLogout()
+                    } catch (err) {
+                        console.error(err)
+                    } finally {
+                        navigate('/login')
+                    }
+                }}
+                className='button logout-btn'
+                style={{ position: 'absolute', top: '12px', right: '12px' }}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ marginRight: '5px' }}>
+                    <path d="M16 13v-2H7V8l-5 4 5 4v-3z" fill="#fff" />
+                    <path d="M20 3h-8v2h8v14h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" fill="#fff" />
+                </svg>
+                Logout
+            </button>
 
             {/* Page Header */}
             <header className='page-header'>
-                <h1>Create Your Custom <span className='highlight'>Interview Plan</span></h1>
-                <p>Let our AI analyze the job requirements and your unique profile to build a winning strategy.</p>
+                <div>
+                    <h1>Create Your Custom <span className='highlight'>Interview Plan</span></h1>
+                    <p>Let our AI analyze the job requirements and your unique profile to build a winning strategy.</p>
+                </div>
             </header>
 
             {/* Main Card */}
