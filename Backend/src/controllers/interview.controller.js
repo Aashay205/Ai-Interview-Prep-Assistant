@@ -1,5 +1,5 @@
 const pdfParse = require("pdf-parse")
-const { generateInterviewReport, generateResumePdf } = require("../services/ai.service")
+const { generateInterviewReport, evaluateMockAnswer, generateResumePdf } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
 
 
@@ -10,26 +10,39 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
 
-    if (!req.file || !req.file.buffer) {
+    const { selfDescription, jobDescription } = req.body
+    const hasResume = Boolean(req.file?.buffer)
+    const hasSelfDescription = Boolean(selfDescription?.trim())
+
+    if (!jobDescription?.trim()) {
         return res.status(400).json({
-            message: "Resume PDF file is required."
+            message: "Job description is required."
         })
     }
 
-    const resumeBuffer = Buffer.isBuffer(req.file.buffer) ? req.file.buffer : Buffer.from(req.file.buffer)
-    const resumeUint8 = new Uint8Array(resumeBuffer)
-    const resumeContent = await (new pdfParse.PDFParse(resumeUint8)).getText()
-    const { selfDescription, jobDescription } = req.body
+    if (!hasResume && !hasSelfDescription) {
+        return res.status(400).json({
+            message: "Please upload a resume or provide a self-description."
+        })
+    }
+
+    let resumeText = ""
+    if (hasResume) {
+        const resumeBuffer = Buffer.isBuffer(req.file.buffer) ? req.file.buffer : Buffer.from(req.file.buffer)
+        const resumeUint8 = new Uint8Array(resumeBuffer)
+        const resumeContent = await (new pdfParse.PDFParse(resumeUint8)).getText()
+        resumeText = resumeContent.text
+    }
 
     const interViewReportByAi = await generateInterviewReport({
-        resume: resumeContent.text,
+        resume: resumeText,
         selfDescription,
         jobDescription
     })
 
     const interviewReport = await interviewReportModel.create({
         user: req.user.id,
-        resume: resumeContent.text,
+        resume: resumeText,
         selfDescription,
         jobDescription,
         ...interViewReportByAi
@@ -103,4 +116,28 @@ async function generateResumePdfController(req, res) {
     res.send(pdfBuffer)
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController }
+async function evaluateMockAnswerController(req, res) {
+    const { interviewId } = req.params
+    const { question, answer, history } = req.body
+
+    if (!question || !answer || answer.trim().length < 10) {
+        return res.status(400).json({ message: "Please provide an answer of at least 10 characters." })
+    }
+
+    const interviewReport = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+
+    if (!interviewReport) {
+        return res.status(404).json({ message: "Interview report not found." })
+    }
+
+    const feedback = await evaluateMockAnswer({
+        role: `${interviewReport.title}\n${interviewReport.jobDescription}`,
+        question,
+        answer,
+        history
+    })
+
+    res.status(200).json({ feedback })
+}
+
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, evaluateMockAnswerController }

@@ -24,20 +24,25 @@
     }
 
     &.logout-btn{
-        background: #ff2d78;
-        color: #ffffff;
+        background: transparent;
+        color: #cbc7cb;
         border: none;
-        padding: 0.5rem 0.9rem;
+        padding: 0.5rem 0;
         font-weight: 600;
         font-size: 0.95rem;
-        border-radius:0.5rem;
+        border-radius: 0;
 
         &:hover{
-            background: #e1034d;
+            color: #ffffff;
         }
 
         &:active{
-            transform: scale(0.90);
+            transform: none;
+        }
+
+        span {
+            margin-right: 0.45rem;
+            color: #ff2d78;
         }
     }
 }

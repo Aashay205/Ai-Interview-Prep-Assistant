@@ -55,6 +55,36 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
+async function evaluateMockAnswer({ role, question, answer, history }) {
+    const mockAnswerSchema = z.object({
+        score: z.number().min(0).max(100),
+        feedback: z.string(),
+        strengths: z.array(z.string()),
+        improvements: z.array(z.string()),
+        followUpQuestion: z.string()
+    })
+
+    const prompt = `Act as a fair, demanding interview coach. Evaluate this candidate answer.
+Role and job context: ${role}
+Current question: ${question}
+Candidate answer: ${answer}
+Previous exchange summary: ${history || "This is the first question."}
+
+Score the answer for correctness, relevance, clarity, and evidence. Give concise, actionable feedback.
+Ask one natural follow-up question that probes the weakest or most important part of the answer.`
+
+    const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: zodToJsonSchema(mockAnswerSchema),
+        }
+    })
+
+    return JSON.parse(response.text)
+}
+
 
 
 async function generatePdfFromHtml(htmlContent) {
@@ -113,4 +143,4 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
 }
 
-module.exports = { generateInterviewReport, generateResumePdf }
+module.exports = { generateInterviewReport, evaluateMockAnswer, generateResumePdf }

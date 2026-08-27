@@ -18,7 +18,8 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
 .home-page {
     width: 100%;
     min-height: 100vh;
-    background-color: $bg-page;
+    background: #171719;
+    background-image: radial-gradient(circle at 90% 0%, rgba(225, 3, 77, 0.14), transparent 34rem), linear-gradient(120deg, #171719 0%, #1b171b 100%);
     color: $text-primary;
     font-family: $font-stack;
 
@@ -220,6 +221,12 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
         background-color: rgba($accent, 0.05);
     }
 
+    &--uploaded {
+        border-color: $accent;
+        border-style: solid;
+        background-color: rgba($accent, 0.08);
+    }
+
     &__icon {
         color: $accent;
         margin-bottom: 0.25rem;
@@ -237,6 +244,21 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
         color: $text-muted;
         margin: 0;
     }
+
+    &__filename {
+        max-width: 100%;
+        overflow: hidden;
+        color: $text-primary;
+        font-size: 0.8rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.upload-error {
+    margin: 0.25rem 0 0;
+    color: #ff829f;
+    font-size: 0.75rem;
 }
 
 // ── OR Divider ────────────────────────────────────────────────────────────────
@@ -262,6 +284,7 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
 
 // ── Self Description ──────────────────────────────────────────────────────────
 .self-description {
+    
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

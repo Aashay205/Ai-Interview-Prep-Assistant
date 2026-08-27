@@ -14,7 +14,9 @@ export const generateInterviewReport = async ({ jobDescription, selfDescription,
     const formData = new FormData()
     formData.append("jobDescription", jobDescription)
     formData.append("selfDescription", selfDescription)
-    formData.append("resume", resumeFile)
+    if (resumeFile) {
+        formData.append("resume", resumeFile)
+    }
 
     const response = await api.post("/api/interview/", formData, {
         headers: {
@@ -53,6 +55,16 @@ export const getAllInterviewReports = async () => {
 export const generateResumePdf = async ({ interviewReportId }) => {
     const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
         responseType: "blob"
+    })
+
+    return response.data
+}
+
+export const evaluateMockAnswer = async ({ interviewId, question, answer, history }) => {
+    const response = await api.post(`/api/interview/mock/${interviewId}/answer`, {
+        question,
+        answer,
+        history
     })
 
     return response.data

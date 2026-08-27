@@ -62,6 +62,7 @@ const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
+    const navigate = useNavigate()
 
     useEffect(() => {
         if (interviewId) {
@@ -92,6 +93,9 @@ const Interview = () => {
                         <h1>{report.title || 'Interview Plan'}</h1>
                         <p>Review your personalized interview plan and practice questions.</p>
                     </div>
+                        <button className='interview-back-button' onClick={() => navigate('/') }>
+                            <span aria-hidden='true'>&larr;</span> Back to create plan
+                    </button>
                 </header>
             </div>
             <div className='interview-layout'>
@@ -170,6 +174,10 @@ const Interview = () => {
 
                 {/* ── Right Sidebar ── */}
                 <aside className='interview-sidebar'>
+
+                    <button className='button primary-button' onClick={() => navigate(`/interview/${interviewId}/mock`)}>
+                        Start mock interview
+                    </button>
 
                     {/* Match Score */}
                     <div className='match-score'>
