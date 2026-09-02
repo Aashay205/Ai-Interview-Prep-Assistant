@@ -122,18 +122,39 @@ Ask one natural follow-up question that probes the weakest or most important par
 
 
 async function generatePdfFromHtml(htmlContent) {
-    // Simple HTML tag stripper for text extraction
-    const stripHtml = (html) => {
-        return html
-            .replace(/<style[^>]*>.*?<\/style>/gi, '')
-            .replace(/<script[^>]*>.*?<\/script>/gi, '')
-            .replace(/<[^>]+>/g, ' ')
+    // Better HTML parsing that preserves content
+    const parseHtmlContent = (html) => {
+        let text = html;
+        
+        // Remove script and style tags completely
+        text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+        
+        // Replace line breaks with newlines
+        text = text.replace(/<br\s*\/?>/gi, '\n');
+        text = text.replace(/<\/p>/gi, '\n');
+        text = text.replace(/<\/div>/gi, '\n');
+        text = text.replace(/<\/li>/gi, '\n');
+        text = text.replace(/<\/h[1-6]>/gi, '\n');
+        
+        // Remove all remaining HTML tags
+        text = text.replace(/<[^>]+>/g, '');
+        
+        // Decode HTML entities
+        text = text
             .replace(/&nbsp;/g, ' ')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
-            .replace(/\s+/g, ' ')
-            .trim()
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+        
+        // Clean up whitespace
+        text = text.replace(/\n\n+/g, '\n\n'); // Remove multiple blank lines
+        text = text.replace(/[ \t]+\n/g, '\n'); // Remove trailing spaces
+        text = text.replace(/\n[ \t]+/g, '\n'); // Remove leading spaces after newline
+        
+        return text.trim();
     }
 
     return new Promise((resolve, reject) => {
@@ -158,75 +179,90 @@ async function generatePdfFromHtml(htmlContent) {
                 reject(error)
             })
 
-            // Extract text from HTML
-            const plainText = stripHtml(htmlContent)
-
-            // Split into sections and format nicely
-            const lines = plainText.split('\n').filter(line => line.trim())
-
-            // Set base font
-            doc.font('Helvetica', 11)
-            doc.fillColor('#333333')
-
-            // Add title if detected
-            if (lines.length > 0) {
-                const firstLine = lines[0].trim()
-                if (firstLine.length < 100) {
-                    doc.fontSize(18)
-                    doc.font('Helvetica-Bold')
-                    doc.text(firstLine, { align: 'center' })
-                    doc.moveDown(0.5)
-                    
-                    // Reset font after title
-                    doc.font('Helvetica', 11)
-                    doc.fillColor('#333333')
-                }
+            // Extract and clean text from HTML
+            const plainText = parseHtmlContent(htmlContent)
+            
+            if (!plainText || plainText.length === 0) {
+                console.warn("Warning: Parsed content is empty, using raw HTML as fallback");
+                doc.fontSize(10).text(htmlContent);
+                doc.end();
+                return;
             }
 
-            // Add content with smart formatting
-            lines.slice(1).forEach((line, index) => {
+            // Split content into lines
+            const lines = plainText.split('\n').filter(line => line.trim());
+
+            if (lines.length === 0) {
+                console.warn("Warning: No lines extracted from content");
+                doc.fontSize(10).text("Resume content could not be parsed. Please try again.");
+                doc.end();
+                return;
+            }
+
+            // Set base font
+            doc.font('Helvetica', 10)
+            doc.fillColor('#333333')
+
+            // Process each line
+            lines.forEach((line) => {
                 const trimmed = line.trim()
-                
                 if (!trimmed) return
 
-                // Detect section headers (usually shorter, all caps or contains keywords)
-                if (trimmed.length < 50 && 
-                    (trimmed === trimmed.toUpperCase() || 
-                     trimmed.includes('EXPERIENCE') ||
-                     trimmed.includes('EDUCATION') ||
-                     trimmed.includes('SKILLS') ||
-                     trimmed.includes('ABOUT') ||
-                     trimmed.includes('SUMMARY'))) {
+                // Detect headers (typically short, uppercase, or known keywords)
+                const isHeader = trimmed.length < 60 && (
+                    trimmed === trimmed.toUpperCase() ||
+                    /^(EXPERIENCE|EDUCATION|SKILLS|ABOUT|SUMMARY|CONTACT|PROJECTS|CERTIFICATIONS|LANGUAGES|TECHNICAL|PROFESSIONAL)/.test(trimmed.toUpperCase())
+                )
+
+                if (isHeader) {
+                    // Add spacing before header
+                    if (doc.y > 50) doc.moveDown(0.3)
                     
-                    doc.moveDown(0.3)
-                    doc.fontSize(12)
+                    // Format as header
+                    doc.fontSize(11)
                     doc.font('Helvetica-Bold')
                     doc.fillColor('#1a1a1a')
                     doc.text(trimmed)
-                    doc.moveDown(0.2)
                     
-                    // Reset font
-                    doc.font('Helvetica', 11)
+                    // Add underline effect
+                    const x = doc.x;
+                    const width = doc.widthOfString(trimmed);
+                    doc.moveTo(x, doc.y).lineTo(x + width, doc.y).stroke('#cccccc');
+                    
+                    doc.moveDown(0.2)
+                    doc.font('Helvetica', 10)
                     doc.fillColor('#333333')
                 } else {
-                    // Regular content
+                    // Regular content line
                     doc.fontSize(10)
-                    doc.font('Helvetica', 10)
+                    doc.font('Helvetica')
+                    
+                    // Detect job titles, companies, dates (lines with specific patterns)
+                    const isBold = /^\w+.*(?:at|@|\||—|-)/.test(trimmed) && trimmed.length < 80;
+                    
+                    if (isBold) {
+                        doc.font('Helvetica-Bold')
+                        doc.fillColor('#1a1a1a')
+                    } else {
+                        doc.font('Helvetica')
+                        doc.fillColor('#333333')
+                    }
+                    
+                    // Text with word wrapping
                     doc.text(trimmed, {
                         align: 'left',
-                        width: doc.page.width - 80,
-                        continued: false
+                        width: doc.page.width - 80
                     })
-                    doc.moveDown(0.1)
                 }
             })
 
-            // Add footer with generation timestamp
+            // Add footer
             doc.moveDown()
             doc.fontSize(8)
+            doc.font('Helvetica')
             doc.fillColor('#999999')
             doc.text(
-                `Generated on ${new Date().toLocaleDateString()}`,
+                `Generated on ${new Date().toLocaleDateString()} • PDF Resume`,
                 { align: 'center' }
             )
 
@@ -271,6 +307,13 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     }, 3, 2000) // 3 retries with 2 second initial delay
 
     const jsonContent = JSON.parse(response.text)
+    
+    // Validate HTML content exists
+    if (!jsonContent.html || jsonContent.html.trim().length === 0) {
+        throw new Error("Gemini API returned empty HTML content for resume")
+    }
+    
+    console.log(`Generating PDF from HTML content (${jsonContent.html.length} characters)`)
 
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
