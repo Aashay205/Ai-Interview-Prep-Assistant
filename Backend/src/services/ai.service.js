@@ -122,157 +122,178 @@ Ask one natural follow-up question that probes the weakest or most important par
 
 
 async function generatePdfFromHtml(htmlContent) {
-    // Better HTML parsing that preserves content
-    const parseHtmlContent = (html) => {
-        let text = html;
-        
-        // Remove script and style tags completely
-        text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Parse HTML and extract structured content
+    const parseStructuredHtml = (html) => {
+        const sections = [];
+        let currentText = '';
+
+        // Remove script and style tags
+        let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
         text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-        
-        // Replace line breaks with newlines
+
+        // Replace heading tags with markers
+        text = text.replace(/<h1[^>]*>([^<]+)<\/h1>/gi, '\n__H1__$1__H1__\n');
+        text = text.replace(/<h2[^>]*>([^<]+)<\/h2>/gi, '\n__H2__$1__H2__\n');
+        text = text.replace(/<h3[^>]*>([^<]+)<\/h3>/gi, '\n__H3__$1__H3__\n');
+
+        // Replace paragraph tags
+        text = text.replace(/<p[^>]*>([^<]*)<\/p>/gi, '__P__$1__P__');
+
+        // Handle lists
+        text = text.replace(/<li[^>]*>([^<]+)<\/li>/gi, '__LI__$1__LI__');
+        text = text.replace(/<ul[^>]*>|<\/ul>/gi, '');
+        text = text.replace(/<ol[^>]*>|<\/ol>/gi, '');
+
+        // Replace line breaks
         text = text.replace(/<br\s*\/?>/gi, '\n');
-        text = text.replace(/<\/p>/gi, '\n');
-        text = text.replace(/<\/div>/gi, '\n');
-        text = text.replace(/<\/li>/gi, '\n');
-        text = text.replace(/<\/h[1-6]>/gi, '\n');
-        
-        // Remove all remaining HTML tags
+
+        // Remove remaining HTML tags
         text = text.replace(/<[^>]+>/g, '');
-        
+
         // Decode HTML entities
         text = text
             .replace(/&nbsp;/g, ' ')
+            .replace(/&bull;/g, '•')
+            .replace(/&middot;/g, '•')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
             .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-        
-        // Clean up whitespace
-        text = text.replace(/\n\n+/g, '\n\n'); // Remove multiple blank lines
-        text = text.replace(/[ \t]+\n/g, '\n'); // Remove trailing spaces
-        text = text.replace(/\n[ \t]+/g, '\n'); // Remove leading spaces after newline
-        
-        return text.trim();
-    }
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&');
+
+        return { raw: text.trim() };
+    };
 
     return new Promise((resolve, reject) => {
         try {
             const doc = new PDFDocument({
                 size: 'A4',
-                margin: 40,
+                margin: 45,
                 bufferPages: true
-            })
+            });
 
-            const pdfBuffer = []
+            const pdfBuffer = [];
 
             doc.on('data', (chunk) => {
-                pdfBuffer.push(chunk)
-            })
+                pdfBuffer.push(chunk);
+            });
 
             doc.on('end', () => {
-                resolve(Buffer.concat(pdfBuffer))
-            })
+                resolve(Buffer.concat(pdfBuffer));
+            });
 
             doc.on('error', (error) => {
-                reject(error)
-            })
+                reject(error);
+            });
 
-            // Extract and clean text from HTML
-            const plainText = parseHtmlContent(htmlContent)
-            
-            if (!plainText || plainText.length === 0) {
-                console.warn("Warning: Parsed content is empty, using raw HTML as fallback");
-                doc.fontSize(10).text(htmlContent);
+            // Parse HTML
+            const { raw } = parseStructuredHtml(htmlContent);
+
+            if (!raw || raw.length === 0) {
+                console.warn("Warning: No content extracted from HTML");
+                doc.fontSize(10).text("Resume content unavailable");
                 doc.end();
                 return;
             }
 
-            // Split content into lines
-            const lines = plainText.split('\n').filter(line => line.trim());
+            // Split by markers and process
+            const parts = raw.split(/(__H[1-3]__|__P__|__LI__)/);
 
-            if (lines.length === 0) {
-                console.warn("Warning: No lines extracted from content");
-                doc.fontSize(10).text("Resume content could not be parsed. Please try again.");
-                doc.end();
-                return;
-            }
+            let i = 0;
+            while (i < parts.length) {
+                const marker = parts[i];
+                const content = parts[i + 1];
 
-            // Set base font
-            doc.font('Helvetica', 10)
-            doc.fillColor('#333333')
-
-            // Process each line
-            lines.forEach((line) => {
-                const trimmed = line.trim()
-                if (!trimmed) return
-
-                // Detect headers (typically short, uppercase, or known keywords)
-                const isHeader = trimmed.length < 60 && (
-                    trimmed === trimmed.toUpperCase() ||
-                    /^(EXPERIENCE|EDUCATION|SKILLS|ABOUT|SUMMARY|CONTACT|PROJECTS|CERTIFICATIONS|LANGUAGES|TECHNICAL|PROFESSIONAL)/.test(trimmed.toUpperCase())
-                )
-
-                if (isHeader) {
-                    // Add spacing before header
-                    if (doc.y > 50) doc.moveDown(0.3)
-                    
-                    // Format as header
-                    doc.fontSize(11)
-                    doc.font('Helvetica-Bold')
-                    doc.fillColor('#1a1a1a')
-                    doc.text(trimmed)
-                    
-                    // Add underline effect
-                    const x = doc.x;
-                    const width = doc.widthOfString(trimmed);
-                    doc.moveTo(x, doc.y).lineTo(x + width, doc.y).stroke('#cccccc');
-                    
-                    doc.moveDown(0.2)
-                    doc.font('Helvetica', 10)
-                    doc.fillColor('#333333')
-                } else {
-                    // Regular content line
-                    doc.fontSize(10)
-                    doc.font('Helvetica')
-                    
-                    // Detect job titles, companies, dates (lines with specific patterns)
-                    const isBold = /^\w+.*(?:at|@|\||—|-)/.test(trimmed) && trimmed.length < 80;
-                    
-                    if (isBold) {
-                        doc.font('Helvetica-Bold')
-                        doc.fillColor('#1a1a1a')
-                    } else {
-                        doc.font('Helvetica')
-                        doc.fillColor('#333333')
-                    }
-                    
-                    // Text with word wrapping
-                    doc.text(trimmed, {
-                        align: 'left',
-                        width: doc.page.width - 80
-                    })
+                if (!content || !content.trim()) {
+                    i += 2;
+                    continue;
                 }
-            })
 
-            // Add footer
-            doc.moveDown()
+                const cleanContent = content.trim();
+
+                if (marker === '__H1__') {
+                    // Main title
+                    doc.fontSize(20)
+                        .font('Helvetica-Bold')
+                        .fillColor('#1a1a1a')
+                        .text(cleanContent, { align: 'center' });
+                    doc.moveDown(0.3);
+                } else if (marker === '__H2__') {
+                    // Section headers
+                    doc.moveDown(0.3);
+                    doc.fontSize(12)
+                        .font('Helvetica-Bold')
+                        .fillColor('#1a1a1a')
+                        .text(cleanContent);
+                    
+                    // Underline effect
+                    const x = 45;
+                    const width = doc.widthOfString(cleanContent);
+                    doc.strokeColor('#cccccc')
+                        .lineWidth(1)
+                        .moveTo(x, doc.y)
+                        .lineTo(x + width, doc.y)
+                        .stroke();
+                    
+                    doc.moveDown(0.2);
+                    doc.fillColor('#333333');
+                } else if (marker === '__H3__') {
+                    // Subsection headers (job titles, company names)
+                    doc.fontSize(11)
+                        .font('Helvetica-Bold')
+                        .fillColor('#1a1a1a')
+                        .text(cleanContent);
+                    doc.moveDown(0.1);
+                    doc.font('Helvetica')
+                        .fillColor('#333333');
+                } else if (marker === '__LI__') {
+                    // List items with bullet
+                    doc.fontSize(10)
+                        .font('Helvetica')
+                        .fillColor('#333333')
+                        .text('• ' + cleanContent, {
+                            align: 'left',
+                            width: doc.page.width - 90
+                        });
+                    doc.moveDown(0.05);
+                } else if (marker === '__P__') {
+                    // Regular paragraphs
+                    const lines = cleanContent.split('\n').filter(l => l.trim());
+                    
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            doc.fontSize(10)
+                                .font('Helvetica')
+                                .fillColor('#333333')
+                                .text(trimmed, {
+                                    align: 'left',
+                                    width: doc.page.width - 90
+                                });
+                        }
+                    });
+                    
+                    doc.moveDown(0.1);
+                }
+
+                i += 2;
+            }
+
+            // Footer
+            doc.moveDown();
             doc.fontSize(8)
-            doc.font('Helvetica')
-            doc.fillColor('#999999')
-            doc.text(
-                `Generated on ${new Date().toLocaleDateString()} • PDF Resume`,
-                { align: 'center' }
-            )
+                .font('Helvetica')
+                .fillColor('#999999')
+                .text(`Generated on ${new Date().toLocaleDateString()} • PDF Resume`, {
+                    align: 'center'
+                });
 
-            // Finalize PDF
-            doc.end()
+            doc.end();
 
         } catch (error) {
-            reject(new Error(`PDF generation failed: ${error.message}`))
+            reject(new Error(`PDF generation failed: ${error.message}`));
         }
-    })
+    });
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
