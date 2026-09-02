@@ -2,6 +2,11 @@
 
 An AI-powered interview preparation platform that helps students and job seekers practice technical and HR interviews with personalized AI-generated questions and intelligent feedback.
 
+
+ # Live Demo
+
+ https://ai-interview-prep-assistant-rho.vercel.app/
+ 
 ## 🌟 Features
 
 - 🤖 AI-generated interview questions based on selected role and experience level
