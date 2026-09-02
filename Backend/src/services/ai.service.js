@@ -122,53 +122,90 @@ Ask one natural follow-up question that probes the weakest or most important par
 
 
 async function generatePdfFromHtml(htmlContent) {
-    // Parse HTML and extract structured content
-    const parseStructuredHtml = (html) => {
-        const sections = [];
-        let currentText = '';
-
-        // Remove script and style tags
-        let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-        text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-
-        // Replace heading tags with markers
-        text = text.replace(/<h1[^>]*>([^<]+)<\/h1>/gi, '\n__H1__$1__H1__\n');
-        text = text.replace(/<h2[^>]*>([^<]+)<\/h2>/gi, '\n__H2__$1__H2__\n');
-        text = text.replace(/<h3[^>]*>([^<]+)<\/h3>/gi, '\n__H3__$1__H3__\n');
-
-        // Replace paragraph tags
-        text = text.replace(/<p[^>]*>([^<]*)<\/p>/gi, '__P__$1__P__');
-
-        // Handle lists
-        text = text.replace(/<li[^>]*>([^<]+)<\/li>/gi, '__LI__$1__LI__');
-        text = text.replace(/<ul[^>]*>|<\/ul>/gi, '');
-        text = text.replace(/<ol[^>]*>|<\/ol>/gi, '');
-
-        // Replace line breaks
-        text = text.replace(/<br\s*\/?>/gi, '\n');
-
-        // Remove remaining HTML tags
-        text = text.replace(/<[^>]+>/g, '');
-
-        // Decode HTML entities
-        text = text
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&bull;/g, '•')
-            .replace(/&middot;/g, '•')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/&amp;/g, '&');
-
-        return { raw: text.trim() };
-    };
-
     return new Promise((resolve, reject) => {
         try {
+            // Simple HTML to text conversion
+            let text = htmlContent;
+            
+            // Log for debugging
+            console.log("HTML Content length:", text.length);
+            console.log("HTML Preview:", text.substring(0, 200));
+            
+            // Remove script and style tags
+            text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+            
+            // Convert heading tags to formatted text with newlines
+            text = text.replace(/<h1[^>]*>([^<]+)<\/h1>/gi, '\n\n$1\n');
+            text = text.replace(/<h2[^>]*>([^<]+)<\/h2>/gi, '\n\n$1\n');
+            text = text.replace(/<h3[^>]*>([^<]+)<\/h3>/gi, '\n$1\n');
+            text = text.replace(/<h4[^>]*>([^<]+)<\/h4>/gi, '\n$1\n');
+            text = text.replace(/<h5[^>]*>([^<]+)<\/h5>/gi, '\n$1\n');
+            text = text.replace(/<h6[^>]*>([^<]+)<\/h6>/gi, '\n$1\n');
+            
+            // Convert paragraph tags
+            text = text.replace(/<p[^>]*>([^<]*)<\/p>/gi, '$1\n');
+            
+            // Convert div tags
+            text = text.replace(/<div[^>]*>([^<]*)<\/div>/gi, '$1\n');
+            
+            // Convert list items to bullets
+            text = text.replace(/<li[^>]*>([^<]+)<\/li>/gi, '• $1\n');
+            
+            // Remove ul, ol tags
+            text = text.replace(/<\/?(?:ul|ol)[^>]*>/gi, '');
+            
+            // Convert br tags to newlines
+            text = text.replace(/<br\s*\/?>/gi, '\n');
+            
+            // Remove all remaining HTML tags
+            text = text.replace(/<[^>]+>/g, '');
+            
+            // Decode HTML entities
+            const entities = {
+                '&nbsp;': ' ',
+                '&bull;': '•',
+                '&middot;': '•',
+                '&lt;': '<',
+                '&gt;': '>',
+                '&quot;': '"',
+                '&#39;': "'",
+                '&apos;': "'",
+                '&amp;': '&'
+            };
+            
+            Object.entries(entities).forEach(([entity, char]) => {
+                text = text.replace(new RegExp(entity, 'g'), char);
+            });
+            
+            // Clean up excessive whitespace
+            text = text.replace(/\n\n\n+/g, '\n\n'); // Multiple newlines to double
+            text = text.replace(/[ \t]+\n/g, '\n'); // Trailing spaces
+            text = text.replace(/\n[ \t]+/g, '\n'); // Leading spaces after newline
+            text = text.replace(/ +/g, ' '); // Multiple spaces to single
+            
+            text = text.trim();
+            
+            console.log("Extracted text length:", text.length);
+            console.log("Text Preview:", text.substring(0, 300));
+            
+            if (!text || text.length === 0) {
+                throw new Error("No content extracted from HTML");
+            }
+            
+            // Split into lines
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            console.log("Total lines:", lines.length);
+            
+            if (lines.length === 0) {
+                throw new Error("No lines extracted from content");
+            }
+            
+            // Create PDF
             const doc = new PDFDocument({
                 size: 'A4',
-                margin: 45,
+                margin: 40,
                 bufferPages: true
             });
 
@@ -179,6 +216,7 @@ async function generatePdfFromHtml(htmlContent) {
             });
 
             doc.on('end', () => {
+                console.log("PDF generated successfully, size:", Buffer.concat(pdfBuffer).length, "bytes");
                 resolve(Buffer.concat(pdfBuffer));
             });
 
@@ -186,101 +224,73 @@ async function generatePdfFromHtml(htmlContent) {
                 reject(error);
             });
 
-            // Parse HTML
-            const { raw } = parseStructuredHtml(htmlContent);
-
-            if (!raw || raw.length === 0) {
-                console.warn("Warning: No content extracted from HTML");
-                doc.fontSize(10).text("Resume content unavailable");
-                doc.end();
-                return;
-            }
-
-            // Split by markers and process
-            const parts = raw.split(/(__H[1-3]__|__P__|__LI__)/);
-
-            let i = 0;
-            while (i < parts.length) {
-                const marker = parts[i];
-                const content = parts[i + 1];
-
-                if (!content || !content.trim()) {
-                    i += 2;
-                    continue;
-                }
-
-                const cleanContent = content.trim();
-
-                if (marker === '__H1__') {
+            // Process and add lines to PDF
+            let isFirstLine = true;
+            
+            lines.forEach((line, index) => {
+                if (!line.trim()) return;
+                
+                // Detect section headers (all caps, shorter lines)
+                const isHeader = line.length < 80 && 
+                    (line === line.toUpperCase() || 
+                     /^(PROFESSIONAL|TECHNICAL|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|ABOUT|SUMMARY|PROJECTS|CONTACT|LANGUAGES)/.test(line.toUpperCase()));
+                
+                // Detect job titles/companies (lines with specific patterns)
+                const isJobTitle = /(?:at|@|—|-|\|)/.test(line) && line.length < 100;
+                
+                if (isFirstLine) {
                     // Main title
-                    doc.fontSize(20)
+                    doc.fontSize(18)
                         .font('Helvetica-Bold')
-                        .fillColor('#1a1a1a')
-                        .text(cleanContent, { align: 'center' });
-                    doc.moveDown(0.3);
-                } else if (marker === '__H2__') {
-                    // Section headers
-                    doc.moveDown(0.3);
+                        .fillColor('#000000')
+                        .text(line, { align: 'center' });
+                    doc.moveDown(0.4);
+                    isFirstLine = false;
+                } else if (isHeader) {
+                    // Section header
+                    doc.moveDown(0.2);
                     doc.fontSize(12)
                         .font('Helvetica-Bold')
                         .fillColor('#1a1a1a')
-                        .text(cleanContent);
+                        .text(line);
                     
-                    // Underline effect
-                    const x = 45;
-                    const width = doc.widthOfString(cleanContent);
-                    doc.strokeColor('#cccccc')
-                        .lineWidth(1)
-                        .moveTo(x, doc.y)
-                        .lineTo(x + width, doc.y)
-                        .stroke();
-                    
+                    // Underline
+                    const x = 40;
+                    const width = doc.widthOfString(line);
+                    doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(x, doc.y).lineTo(x + width, doc.y).stroke();
                     doc.moveDown(0.2);
-                    doc.fillColor('#333333');
-                } else if (marker === '__H3__') {
-                    // Subsection headers (job titles, company names)
+                } else if (isJobTitle) {
+                    // Job title/company
                     doc.fontSize(11)
                         .font('Helvetica-Bold')
                         .fillColor('#1a1a1a')
-                        .text(cleanContent);
+                        .text(line);
                     doc.moveDown(0.1);
-                    doc.font('Helvetica')
-                        .fillColor('#333333');
-                } else if (marker === '__LI__') {
-                    // List items with bullet
+                } else if (line.startsWith('•')) {
+                    // Bullet point
                     doc.fontSize(10)
                         .font('Helvetica')
                         .fillColor('#333333')
-                        .text('• ' + cleanContent, {
+                        .text(line, {
                             align: 'left',
-                            width: doc.page.width - 90
+                            width: doc.page.width - 80
                         });
                     doc.moveDown(0.05);
-                } else if (marker === '__P__') {
-                    // Regular paragraphs
-                    const lines = cleanContent.split('\n').filter(l => l.trim());
-                    
-                    lines.forEach(line => {
-                        const trimmed = line.trim();
-                        if (trimmed) {
-                            doc.fontSize(10)
-                                .font('Helvetica')
-                                .fillColor('#333333')
-                                .text(trimmed, {
-                                    align: 'left',
-                                    width: doc.page.width - 90
-                                });
-                        }
-                    });
-                    
-                    doc.moveDown(0.1);
+                } else {
+                    // Regular text
+                    doc.fontSize(10)
+                        .font('Helvetica')
+                        .fillColor('#333333')
+                        .text(line, {
+                            align: 'left',
+                            width: doc.page.width - 80
+                        });
+                    doc.moveDown(0.08);
                 }
-
-                i += 2;
-            }
+            });
 
             // Footer
-            doc.moveDown();
+            doc.moveDown(0.2);
             doc.fontSize(8)
                 .font('Helvetica')
                 .fillColor('#999999')
@@ -291,6 +301,7 @@ async function generatePdfFromHtml(htmlContent) {
             doc.end();
 
         } catch (error) {
+            console.error("PDF Generation Error:", error.message);
             reject(new Error(`PDF generation failed: ${error.message}`));
         }
     });
