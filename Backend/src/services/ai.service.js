@@ -88,29 +88,59 @@ Ask one natural follow-up question that probes the weakest or most important par
 
 
 async function generatePdfFromHtml(htmlContent) {
-    console.log("Executable Path:", puppeteer.executablePath());
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox"
-        ]
-    })
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
+    let browser = null;
+    try {
+        console.log("Executable Path:", puppeteer.executablePath());
+        
+        // Launch browser with production-safe settings
+        browser = await puppeteer.launch({
+            headless: "new",
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-web-resources"
+            ],
+            timeout: 30000 // 30 second timeout for browser launch
+        });
+        
+        const page = await browser.newPage();
+        
+        // Set viewport and timeout
+        await page.setViewport({ width: 1200, height: 1600 });
+        await page.setDefaultTimeout(30000);
+        
+        // Set content with increased timeout
+        await page.setContent(htmlContent, { waitUntil: "networkidle2", timeout: 30000 });
 
-    const pdfBuffer = await page.pdf({
-        format: "A4", margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
+        const pdfBuffer = await page.pdf({
+            format: "A4", 
+            margin: {
+                top: "20mm",
+                bottom: "20mm",
+                left: "15mm",
+                right: "15mm"
+            },
+            printBackground: true,
+            timeout: 30000
+        });
+
+        await browser.close();
+        return pdfBuffer;
+    } catch (error) {
+        // Ensure browser is closed even if error occurs
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error("Error closing browser:", closeError.message);
+            }
         }
-    })
-
-    await browser.close()
-
-    return pdfBuffer
+        
+        console.error("PDF Generation Error:", error.message);
+        throw new Error(`Failed to generate PDF: ${error.message}`);
+    }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {

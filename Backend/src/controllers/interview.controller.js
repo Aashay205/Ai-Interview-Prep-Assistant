@@ -96,25 +96,40 @@ async function getAllInterviewReportsController(req, res) {
 async function generateResumePdfController(req, res) {
     const { interviewReportId } = req.params
 
-    // CRITICAL: Verify ownership before generating PDF
-    const interviewReport = await interviewReportModel.findOne({ _id: interviewReportId, user: req.user.id })
+    try {
+        // CRITICAL: Verify ownership before generating PDF
+        const interviewReport = await interviewReportModel.findOne({ _id: interviewReportId, user: req.user.id })
 
-    if (!interviewReport) {
-        return res.status(404).json({
-            message: "Interview report not found."
+        if (!interviewReport) {
+            return res.status(404).json({
+                message: "Interview report not found."
+            })
+        }
+
+        const { resume, jobDescription, selfDescription } = interviewReport
+
+        const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
+
+        res.set({
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename=resume_${interviewReportId}.pdf`
+        })
+
+        res.send(pdfBuffer)
+    } catch (error) {
+        console.error("Error generating resume PDF:", error.message, error.stack)
+        
+        // Check if it's a Puppeteer/Browser-related error
+        if (error.message.includes("chrome") || error.message.includes("browser") || error.message.includes("puppeteer")) {
+            return res.status(500).json({
+                message: "PDF generation service is temporarily unavailable. Please try again later."
+            })
+        }
+        
+        res.status(500).json({
+            message: "Error generating resume PDF. Please try again."
         })
     }
-
-    const { resume, jobDescription, selfDescription } = interviewReport
-
-    const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
-
-    res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=resume_${interviewReportId}.pdf`
-    })
-
-    res.send(pdfBuffer)
 }
 
 async function evaluateMockAnswerController(req, res) {
