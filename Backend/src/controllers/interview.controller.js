@@ -119,6 +119,14 @@ async function generateResumePdfController(req, res) {
     } catch (error) {
         console.error("Error generating resume PDF:", error.message, error.stack)
         
+        // Check if it's an API rate limit error
+        const isRateLimitError = error.status === "UNAVAILABLE" || error.code === 503 || error.message?.includes("high demand")
+        if (isRateLimitError) {
+            return res.status(503).json({
+                message: "PDF generation service is temporarily overloaded. Please try again in a moment."
+            })
+        }
+        
         // Check if it's a Puppeteer/Browser-related error
         if (error.message.includes("chrome") || error.message.includes("browser") || error.message.includes("puppeteer")) {
             return res.status(500).json({

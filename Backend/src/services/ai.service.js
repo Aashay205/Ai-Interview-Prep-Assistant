@@ -7,6 +7,33 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
 })
 
+/**
+ * Retry helper with exponential backoff for API calls
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number} initialDelayMs - Initial delay in milliseconds (default: 1000)
+ */
+async function retryWithBackoff(fn, maxRetries = 3, initialDelayMs = 1000) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn()
+        } catch (error) {
+            const isRateLimitError = error.status === "UNAVAILABLE" || error.code === 503 || error.message?.includes("high demand")
+            const isLastAttempt = attempt === maxRetries
+            
+            if (!isRateLimitError || isLastAttempt) {
+                throw error
+            }
+            
+            // Exponential backoff: 1s, 2s, 4s, 8s...
+            const delayMs = initialDelayMs * Math.pow(2, attempt)
+            console.log(`API rate limit hit. Retrying in ${delayMs}ms... (Attempt ${attempt + 1}/${maxRetries})`)
+            
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+        }
+    }
+}
+
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -41,14 +68,17 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         Job Description: ${jobDescription}
 `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
+    // Use retry logic to handle API rate limiting
+    const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: zodToJsonSchema(interviewReportSchema),
+            }
+        })
+    }, 3, 2000) // 3 retries with 2 second initial delay
 
     return JSON.parse(response.text)
 
@@ -73,14 +103,17 @@ Previous exchange summary: ${history || "This is the first question."}
 Score the answer for correctness, relevance, clarity, and evidence. Give concise, actionable feedback.
 Ask one natural follow-up question that probes the weakest or most important part of the answer.`
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(mockAnswerSchema),
-        }
-    })
+    // Use retry logic to handle API rate limiting
+    const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: zodToJsonSchema(mockAnswerSchema),
+            }
+        })
+    }, 3, 2000) // 3 retries with 2 second initial delay
 
     return JSON.parse(response.text)
 }
@@ -162,15 +195,17 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
-    })
-
+    // Use retry logic to handle API rate limiting
+    const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: zodToJsonSchema(resumePdfSchema),
+            }
+        })
+    }, 3, 2000) // 3 retries with 2 second initial delay
 
     const jsonContent = JSON.parse(response.text)
 
