@@ -1,7 +1,8 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
+const PDFDocument = require("pdfkit")
+const { Readable } = require("stream")
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
@@ -121,59 +122,121 @@ Ask one natural follow-up question that probes the weakest or most important par
 
 
 async function generatePdfFromHtml(htmlContent) {
-    let browser = null;
-    try {
-        console.log("Executable Path:", puppeteer.executablePath());
-        
-        // Launch browser with production-safe settings
-        browser = await puppeteer.launch({
-            headless: "new",
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-web-resources"
-            ],
-            timeout: 30000 // 30 second timeout for browser launch
-        });
-        
-        const page = await browser.newPage();
-        
-        // Set viewport and timeout
-        await page.setViewport({ width: 1200, height: 1600 });
-        await page.setDefaultTimeout(30000);
-        
-        // Set content with increased timeout
-        await page.setContent(htmlContent, { waitUntil: "networkidle2", timeout: 30000 });
-
-        const pdfBuffer = await page.pdf({
-            format: "A4", 
-            margin: {
-                top: "20mm",
-                bottom: "20mm",
-                left: "15mm",
-                right: "15mm"
-            },
-            printBackground: true,
-            timeout: 30000
-        });
-
-        await browser.close();
-        return pdfBuffer;
-    } catch (error) {
-        // Ensure browser is closed even if error occurs
-        if (browser) {
-            try {
-                await browser.close();
-            } catch (closeError) {
-                console.error("Error closing browser:", closeError.message);
-            }
-        }
-        
-        console.error("PDF Generation Error:", error.message);
-        throw new Error(`Failed to generate PDF: ${error.message}`);
+    // Simple HTML tag stripper for text extraction
+    const stripHtml = (html) => {
+        return html
+            .replace(/<style[^>]*>.*?<\/style>/gi, '')
+            .replace(/<script[^>]*>.*?<\/script>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')
+            .trim()
     }
+
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 40,
+                bufferPages: true
+            })
+
+            const pdfBuffer = []
+
+            doc.on('data', (chunk) => {
+                pdfBuffer.push(chunk)
+            })
+
+            doc.on('end', () => {
+                resolve(Buffer.concat(pdfBuffer))
+            })
+
+            doc.on('error', (error) => {
+                reject(error)
+            })
+
+            // Extract text from HTML
+            const plainText = stripHtml(htmlContent)
+
+            // Split into sections and format nicely
+            const lines = plainText.split('\n').filter(line => line.trim())
+
+            // Set base font
+            doc.font('Helvetica', 11)
+            doc.fillColor('#333333')
+
+            // Add title if detected
+            if (lines.length > 0) {
+                const firstLine = lines[0].trim()
+                if (firstLine.length < 100) {
+                    doc.fontSize(18)
+                    doc.font('Helvetica-Bold')
+                    doc.text(firstLine, { align: 'center' })
+                    doc.moveDown(0.5)
+                    
+                    // Reset font after title
+                    doc.font('Helvetica', 11)
+                    doc.fillColor('#333333')
+                }
+            }
+
+            // Add content with smart formatting
+            lines.slice(1).forEach((line, index) => {
+                const trimmed = line.trim()
+                
+                if (!trimmed) return
+
+                // Detect section headers (usually shorter, all caps or contains keywords)
+                if (trimmed.length < 50 && 
+                    (trimmed === trimmed.toUpperCase() || 
+                     trimmed.includes('EXPERIENCE') ||
+                     trimmed.includes('EDUCATION') ||
+                     trimmed.includes('SKILLS') ||
+                     trimmed.includes('ABOUT') ||
+                     trimmed.includes('SUMMARY'))) {
+                    
+                    doc.moveDown(0.3)
+                    doc.fontSize(12)
+                    doc.font('Helvetica-Bold')
+                    doc.fillColor('#1a1a1a')
+                    doc.text(trimmed)
+                    doc.moveDown(0.2)
+                    
+                    // Reset font
+                    doc.font('Helvetica', 11)
+                    doc.fillColor('#333333')
+                } else {
+                    // Regular content
+                    doc.fontSize(10)
+                    doc.font('Helvetica', 10)
+                    doc.text(trimmed, {
+                        align: 'left',
+                        width: doc.page.width - 80,
+                        continued: false
+                    })
+                    doc.moveDown(0.1)
+                }
+            })
+
+            // Add footer with generation timestamp
+            doc.moveDown()
+            doc.fontSize(8)
+            doc.fillColor('#999999')
+            doc.text(
+                `Generated on ${new Date().toLocaleDateString()}`,
+                { align: 'center' }
+            )
+
+            // Finalize PDF
+            doc.end()
+
+        } catch (error) {
+            reject(new Error(`PDF generation failed: ${error.message}`))
+        }
+    })
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
