@@ -3,6 +3,7 @@ import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/hooks/useAuth'
+import LoadingScreen from '../../../components/LoadingScreen'
 
 const Home = () => {
 
@@ -41,11 +42,7 @@ const Home = () => {
     }
 
     if (loading) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+        return <LoadingScreen message='Loading your interview plan...' />
     }
 
     return (

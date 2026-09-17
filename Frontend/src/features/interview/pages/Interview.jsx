@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import '../style/interview.scss'
+import LoadingScreen from '../../../components/LoadingScreen'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate, useParams } from 'react-router'
 
@@ -73,11 +74,7 @@ const Interview = () => {
 
 
     if (loading || !report) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+        return <LoadingScreen message='Loading your interview plan...' />
     }
 
     const scoreColor =

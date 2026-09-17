@@ -30,3 +30,95 @@ textarea {
 .highlight{
     color: #d20d3b;
 }
+
+.loading-screen {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background: #171719;
+    background-image: radial-gradient(circle at 12% 18%, rgba(255, 45, 120, 0.16), transparent 28rem),
+        radial-gradient(circle at 90% 85%, rgba(91, 71, 148, 0.12), transparent 24rem),
+        linear-gradient(120deg, #171719 0%, #1b171b 100%);
+    color: #e6edf3;
+}
+
+.loading-screen__glow {
+    position: absolute;
+    width: min(70vw, 34rem);
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 45, 120, 0.16);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3rem rgba(255, 45, 120, 0.025), 0 0 0 7rem rgba(255, 45, 120, 0.018);
+    animation: loading-pulse 2.6s ease-in-out infinite;
+}
+
+.loading-screen__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: loading-enter 0.6s ease-out both;
+
+    h1 {
+        margin: 1.5rem 0 0.5rem;
+        font-size: clamp(1.35rem, 3vw, 2rem);
+        font-weight: 600;
+    }
+
+    p { color: #7d8590; font-size: 0.9rem; }
+}
+
+.loading-screen__kicker {
+    color: #ff2d78;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+}
+
+.loading-screen__mark {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    height: 2.25rem;
+    margin-top: 1.25rem;
+
+    span {
+        display: block;
+        width: 0.45rem;
+        height: 1rem;
+        border-radius: 0.25rem;
+        background: #ff2d78;
+        animation: loading-bars 1s ease-in-out infinite;
+
+        &:nth-child(2) { height: 1.65rem; animation-delay: 0.14s; }
+        &:nth-child(3) { height: 1.25rem; animation-delay: 0.28s; }
+    }
+}
+
+@keyframes loading-bars {
+    0%, 100% { transform: scaleY(0.65); opacity: 0.5; }
+    50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes loading-pulse {
+    0%, 100% { transform: scale(0.94); opacity: 0.6; }
+    50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes loading-enter {
+    from { opacity: 0; transform: translateY(0.75rem); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-screen__glow,
+    .loading-screen__content,
+    .loading-screen__mark span { animation: none; }
+}

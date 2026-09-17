@@ -2,6 +2,7 @@ import React,{useState} from 'react'
 import { useNavigate, Link } from 'react-router'
 import "../auth.form.scss"
 import { useAuth } from '../hooks/useAuth'
+import LoadingScreen from '../../../components/LoadingScreen'
 
 const Register = () => {
 
@@ -19,7 +20,7 @@ const Register = () => {
     }
 
     if(loading){
-        return (<main><h1>Loading.......</h1></main>)
+        return <LoadingScreen message='Preparing your workspace...' />
     }
 
     return (

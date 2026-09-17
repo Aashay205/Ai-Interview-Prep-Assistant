@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getInterviewReportById, evaluateMockAnswer } from '../services/interview.api'
 import '../style/mock-interview.scss'
+import LoadingScreen from '../../../components/LoadingScreen'
 
 const MAX_QUESTIONS = 5
 
@@ -61,7 +62,7 @@ const MockInterview = () => {
         setFeedback(null)
     }
 
-    if (loading) return <main className='loading-screen'><h1>Preparing your mock interview...</h1></main>
+    if (loading) return <LoadingScreen message='Preparing your mock interview...' />
     if (!report) return <main className='mock-interview'><p>{error}</p></main>
 
     const finished = history.length >= MAX_QUESTIONS
