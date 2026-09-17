@@ -4,13 +4,15 @@ An AI-powered interview preparation platform that helps students and job seekers
 
 ## 🌟 Features
 
-- 🤖 AI-generated interview questions based on selected role and experience level
+- 🤖 AI-generated interview questions based on a job description
 - 💬 Personalized feedback using Google Gemini AI
 - 🔐 Secure JWT Authentication
 - 👤 User Registration & Login
-- 📚 Technical and HR interview preparation
-- 📈 Track interview sessions and progress
-- 🎯 Role-specific interview practice
+- 📄 Resume upload or self-description support
+- 📚 Technical and behavioral interview preparation
+- 📈 Track interview reports and match scores
+- 🎙️ Live mock interview sessions with AI feedback
+- 📥 Generate an improved resume PDF
 - 📱 Fully responsive UI
 - ⚡ Fast and intuitive user experience
 
@@ -20,9 +22,10 @@ An AI-powered interview preparation platform that helps students and job seekers
 
 ### Frontend
 - React.js
-- Tailwind CSS
+- Sass
 - Axios
 - React Router
+- Vite
 
 ### Backend
 - Node.js
@@ -45,11 +48,11 @@ AI-Interview-Prep-Assistant/
 │   ├── src/
 │   │   ├── config/          # Database & configuration files
 │   │   ├── controllers/     # Business logic
-│   │   ├── middleware/      # Authentication middleware
+│   │   ├── middlewares/     # Authentication and file upload middleware
 │   │   ├── models/          # MongoDB models
 │   │   ├── routes/          # API routes
 │   │   ├── services/        # AI & utility services
-│   │   └── utils/           # Helper functions
+│   │   └── services/        # AI service integration
 │   │
 │   ├── server.js            # Entry point
 │   ├── package.json
@@ -58,13 +61,12 @@ AI-Interview-Prep-Assistant/
 ├── Frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── assets/          # Images & static assets
-│   │   ├── components/      # Reusable React components
-│   │   ├── pages/           # Application pages
-│   │   ├── context/         # React Context API
-│   │   ├── services/        # API calls
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── App.jsx
+│   │   ├── components/      # Shared components
+│   │   ├── features/        # Auth and interview features
+│   │   │   ├── auth/        # Authentication pages, context, hooks, and API
+│   │   │   └── interview/   # Interview pages, context, hooks, styles, and API
+│   │   ├── App.jsx
+│   │   └── app.routes.jsx
 │   │
 │   ├── index.html
 │   ├── vite.config.js
@@ -78,15 +80,13 @@ AI-Interview-Prep-Assistant/
 ## ✨ Workflow
 
 1. User creates an account or logs in.
-2. Selects desired job role.
-3. AI generates interview questions.
-4. User answers each question.
-5. Gemini AI analyzes the response.
-6. AI provides:
-   - Strengths
-   - Weaknesses
-   - Suggestions for improvement
-7. User continues practicing and improving interview skills.
+2. User enters a target job description.
+3. User uploads a PDF/DOCX resume or provides a self-description.
+4. Gemini AI generates a personalized interview plan with technical and behavioral questions.
+5. User reviews the generated plan and match score.
+6. User can start a live mock interview and submit answers for AI evaluation.
+7. AI provides a score, strengths, improvements, and follow-up questions.
+8. User can review previous reports or generate an improved resume PDF.
 
 ---
 
@@ -119,20 +119,24 @@ cd Ai-Interview-Prep-Assistant
 ### Backend Setup
 
 ```bash
-cd server
+cd Backend
 npm install
 ```
 
 Create a `.env` file
 
 ```env
-PORT=5000
+NODE_ENV=development
+
+PORT=3000
+
+CLIENT_URL=http://localhost:5173
 
 MONGO_URI=your_mongodb_connection_string
 
 JWT_SECRET=your_secret_key
 
-GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_GENAI_API_KEY=your_google_genai_api_key
 ```
 
 Run backend
@@ -146,20 +150,26 @@ npm start
 ### Frontend Setup
 
 ```bash
-cd client
+cd Frontend
 npm install
 ```
 
 Run frontend
 
 ```bash
-npm start
+npm run dev
 ```
 
 The application will be available at
 
 ```
-http://localhost:3000
+http://localhost:5173
+```
+
+For a custom backend URL, create `Frontend/.env.local`:
+
+```env
+VITE_API_URL=http://localhost:3000
 ```
 
 ---
@@ -168,10 +178,13 @@ http://localhost:3000
 
 | Variable | Description |
 |----------|-------------|
+| NODE_ENV | Application environment |
+| PORT | Backend port |
+| CLIENT_URL | Allowed frontend origin |
 | MONGO_URI | MongoDB Connection String |
 | JWT_SECRET | Secret Key for JWT |
-| GEMINI_API_KEY | Google Gemini API Key |
-| PORT | Backend Port |
+| GOOGLE_GENAI_API_KEY | Google Gemini API Key |
+| VITE_API_URL | Backend API URL used by the frontend |
 
 ---
 
