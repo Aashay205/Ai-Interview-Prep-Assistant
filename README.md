@@ -95,11 +95,12 @@ AI-Interview-Prep-Assistant/
 ---
 
 ## 📸 Screenshots
-<img width="1897" height="893" alt="Screenshot 2026-07-23 133909" src="https://github.com/user-attachments/assets/e9fec501-f472-43b5-9f2f-dbd404f4be7b" />
-<img width="1917" height="911" alt="Screenshot 2026-07-23 133849" src="https://github.com/user-attachments/assets/9c12f1d4-2cc5-49e8-894b-c0b5c694361a" />
-<img width="1917" height="897" alt="Screenshot 2026-07-23 133606" src="https://github.com/user-attachments/assets/49b45022-0fa1-444f-a8f0-a6c260be7452" />
-<img width="1916" height="911" alt="Screenshot 2026-07-23 133554" src="https://github.com/user-attachments/assets/f73eb3cd-6f43-44f0-8561-e306d3a96e1f" />
-<img width="1917" height="907" alt="Screenshot 2026-07-23 133540" src="https://github.com/user-attachments/assets/352d2f38-f02b-4443-9f01-0225c3fb9e8f" />
+<img width="1835" height="955" alt="Screenshot 2026-09-17 154058" src="https://github.com/user-attachments/assets/69d0e765-ae5c-464e-a0e4-28a0e3164ea5" />
+<img width="1848" height="957" alt="Screenshot 2026-09-17 155254" src="https://github.com/user-attachments/assets/610cad16-2211-41c8-8a34-dc607c2e4b5d" />
+<img width="1847" height="957" alt="Screenshot 2026-09-17 154045" src="https://github.com/user-attachments/assets/a860a5c9-acc0-4b5c-92e2-a32b84c833a9" />
+<img width="1847" height="951" alt="Screenshot 2026-09-17 154004" src="https://github.com/user-attachments/assets/5d29097a-2f8f-4a42-952c-4a1a9f2f8844" />
+<img width="1851" height="957" alt="Screenshot 2026-09-17 153932" src="https://github.com/user-attachments/assets/75474e1b-8f8a-4530-a232-01ec078e9735" />
+
 
 
 ---
