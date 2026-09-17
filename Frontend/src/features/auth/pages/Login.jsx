@@ -23,9 +23,21 @@ const Login = () => {
 
 
     return (
-        <main>
-            <div className="form-container">
-                <h1>Login</h1>
+        <main className="auth-page">
+            <div className="auth-shell">
+                <section className="auth-intro">
+                    <span className="auth-kicker">AI INTERVIEW PREP</span>
+                    <h1>Walk into your next interview <span>prepared.</span></h1>
+                    <p>Build a focused interview plan, practice with AI, and turn every answer into progress.</p>
+                    <div className="auth-stat"><strong>Personalized practice</strong><span>Built around your goals and experience.</span></div>
+                </section>
+
+                <div className="form-container">
+                    <div className="form-heading">
+                        <span className="form-eyebrow">WELCOME BACK</span>
+                        <h2>Login</h2>
+                        <p>Continue your interview preparation.</p>
+                    </div>
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label htmlFor="email">Email</label>
@@ -42,6 +54,7 @@ const Login = () => {
                     <button className='button primary-button' >Login</button>
                 </form>
                 <p>Don't have an account? <Link to={"/register"} >Register</Link> </p>
+                </div>
             </div>
         </main>
     )

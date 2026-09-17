@@ -56,7 +56,6 @@ AI-Interview-Prep-Assistant/
 │   │   ├── middlewares/     # Authentication and file upload middleware
 │   │   ├── models/          # MongoDB models
 │   │   ├── routes/          # API routes
-│   │   ├── services/        # AI & utility services
 │   │   └── services/        # AI service integration
 │   │
 │   ├── server.js            # Entry point

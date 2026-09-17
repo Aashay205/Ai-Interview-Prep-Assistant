@@ -1,5 +1,6 @@
 import React,{useState} from 'react'
 import { useNavigate, Link } from 'react-router'
+import "../auth.form.scss"
 import { useAuth } from '../hooks/useAuth'
 
 const Register = () => {
@@ -22,9 +23,21 @@ const Register = () => {
     }
 
     return (
-        <main>
-            <div className="form-container">
-                <h1>Register</h1>
+        <main className="auth-page">
+            <div className="auth-shell">
+                <section className="auth-intro">
+                    <span className="auth-kicker">AI INTERVIEW PREP</span>
+                    <h1>Make your next answer your <span>strongest.</span></h1>
+                    <p>Practice with a plan that understands the role, your background, and where you want to go.</p>
+                    <div className="auth-stat"><strong>Your preparation, elevated</strong><span>Feedback that gets sharper with every session.</span></div>
+                </section>
+
+                <div className="form-container">
+                    <div className="form-heading">
+                        <span className="form-eyebrow">GET STARTED</span>
+                        <h2>Create account</h2>
+                        <p>Set up your personal interview workspace.</p>
+                    </div>
 
                 <form onSubmit={handleSubmit}>
 
@@ -52,6 +65,7 @@ const Register = () => {
                 </form>
 
                 <p>Already have an account? <Link to={"/login"} >Login</Link> </p>
+                </div>
             </div>
         </main>
     )
