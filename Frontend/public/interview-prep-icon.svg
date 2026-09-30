@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Interview prep icon</title>
+  <desc id="desc">A dark rounded square containing a pink conversation bubble and a bright checkmark.</desc>
+  <defs>
+    <linearGradient id="background" x1="56" y1="32" x2="456" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20263A"/>
+      <stop offset="1" stop-color="#11151F"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="160" y1="118" x2="382" y2="374" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF3B91"/>
+      <stop offset="1" stop-color="#E90058"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#background)"/>
+  <rect x="25" y="25" width="462" height="462" rx="115" fill="none" stroke="#38425D" stroke-width="2"/>
+
+  <!-- Conversation: practice your answer. -->
+  <path d="M117 151c0-28.17 22.83-51 51-51h150c28.17 0 51 22.83 51 51v102c0 28.17-22.83 51-51 51H229l-67.28 52.32c-5.69 4.42-13.72.37-13.72-6.83V304c-18.27-7.93-31-26.14-31-47v-106Z" fill="#20283B" stroke="#3B4967" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M169 166h148M169 202h96" stroke="#8A9BB8" stroke-width="15" stroke-linecap="round"/>
+
+  <!-- Progress: an interview answer checked off. -->
+  <circle cx="334" cy="329" r="76" fill="url(#accent)" filter="url(#glow)"/>
+  <circle cx="334" cy="329" r="76" fill="none" stroke="#FF80B7" stroke-opacity=".58" stroke-width="3"/>
+  <path d="m296 329 25 25 53-57" fill="none" stroke="#FFF8FC" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Fine pink baseline borrowed from the interface language. -->
+  <path d="M117 410h98" stroke="#FF2B82" stroke-width="10" stroke-linecap="round"/>
+</svg>
