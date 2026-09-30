@@ -157,3 +157,10 @@ $auth-accent: #ff2d78;
     .auth-intro::after, .auth-stat { margin-top: 1.5rem; }
     .form-container { padding: 2rem 1.5rem 2.25rem; }
 }
+
+.auth-error {
+    margin: -0.75rem 0 0;
+    color: #ff829f;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}

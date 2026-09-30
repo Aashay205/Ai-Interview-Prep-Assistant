@@ -10,13 +10,19 @@ const Register = () => {
     const [ username, setUsername ] = useState("")
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState("")
 
     const {loading,handleRegister} = useAuth()
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password})
-        navigate("/")
+        setError("")
+        try {
+            await handleRegister({ username, email, password })
+            navigate("/")
+        } catch (registerError) {
+            setError(registerError.response?.data?.message || "Unable to create your account. Check your connection and try again.")
+        }
     }
 
     if(loading){
@@ -64,6 +70,7 @@ const Register = () => {
                     <button className='button primary-button' >Register</button>
 
                 </form>
+                {error && <p className='auth-error' role='alert'>{error}</p>}
 
                 <p>Already have an account? <Link to={"/login"} >Login</Link> </p>
                 </div>

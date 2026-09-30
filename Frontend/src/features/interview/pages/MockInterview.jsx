@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getInterviewReportById, evaluateMockAnswer } from '../services/interview.api'
 import '../style/mock-interview.scss'
@@ -17,6 +17,9 @@ const MockInterview = () => {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [sessionId] = useState(() => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    const [sessionDebrief, setSessionDebrief] = useState(null)
+    const startQuestionRef = useRef({ interviewId: null, question: '' })
 
     useEffect(() => {
         const loadReport = async () => {
@@ -24,7 +27,34 @@ const MockInterview = () => {
                 const data = await getInterviewReportById(interviewId)
                 const interviewReport = data.interviewReport
                 setReport(interviewReport)
-                setQuestion(interviewReport.technicalQuestions?.[0]?.question || interviewReport.behavioralQuestions?.[0]?.question || '')
+
+                if (startQuestionRef.current.interviewId !== interviewId) {
+                    const plannedQuestions = [
+                        ...(interviewReport.technicalQuestions || []),
+                        ...(interviewReport.behavioralQuestions || [])
+                    ].map(item => item.question).filter(Boolean)
+                    let startIndex = 0
+
+                    if (plannedQuestions.length > 0) {
+                        const storageKey = `mock-interview-start:${interviewId}`
+                        try {
+                            const savedIndex = Number.parseInt(window.localStorage.getItem(storageKey) || '0', 10)
+                            startIndex = Number.isInteger(savedIndex) && savedIndex >= 0
+                                ? savedIndex % plannedQuestions.length
+                                : 0
+                            window.localStorage.setItem(storageKey, String((startIndex + 1) % plannedQuestions.length))
+                        } catch {
+                            startIndex = Math.floor(Math.random() * plannedQuestions.length)
+                        }
+                    }
+
+                    startQuestionRef.current = {
+                        interviewId,
+                        question: plannedQuestions[startIndex] || ''
+                    }
+                }
+
+                setQuestion(startQuestionRef.current.question)
             } catch {
                 setError('Unable to load this interview.')
             } finally {
@@ -45,10 +75,24 @@ const MockInterview = () => {
                 interviewId,
                 question,
                 answer,
-                history: history.map(item => `${item.question}: ${item.answer}`).join('\n')
+                history: history.map(({ question, answer, feedback }) => ({
+                    question,
+                    answer,
+                    score: feedback.score,
+                    feedback: feedback.feedback,
+                    strengths: feedback.strengths,
+                    improvements: feedback.improvements
+                })),
+                sessionId
             })
             setFeedback(data.feedback)
             setHistory(current => [ ...current, { question, answer, feedback: data.feedback } ])
+            if (history.length + 1 >= MAX_QUESTIONS) {
+                setSessionDebrief({
+                    summary: data.feedback.sessionSummary,
+                    practicePriorities: data.feedback.practicePriorities || []
+                })
+            }
             setAnswer('')
         } catch (submitError) {
             setError(submitError.response?.data?.message || 'Could not evaluate your answer.')
@@ -58,9 +102,11 @@ const MockInterview = () => {
     }
 
     const continueInterview = () => {
-        setQuestion(feedback.followUpQuestion)
+        setQuestion(feedback.nextQuestion)
         setFeedback(null)
     }
+
+    const finishInterview = () => setFeedback(null)
 
     if (loading) return <LoadingScreen message='Preparing your mock interview...' />
     if (!report) return <main className='mock-interview'><p>{error}</p></main>
@@ -91,13 +137,7 @@ const MockInterview = () => {
                 </div>
 
                 <section className='mock-interview__panel'>
-                {finished ? (
-                    <div className='mock-interview__summary'>
-                        <h2>Session complete</h2>
-                        <p>Your average score was {Math.round(history.reduce((total, item) => total + item.feedback.score, 0) / history.length)}%.</p>
-                        <button className='button primary-button' onClick={() => navigate(`/interview/${interviewId}`)}>Review interview plan</button>
-                    </div>
-                ) : feedback ? (
+                {feedback ? (
                     <div className='mock-interview__feedback'>
                         <div className='mock-interview__score'>{feedback.score}<small>/100</small></div>
                         <p>{feedback.feedback}</p>
@@ -105,7 +145,31 @@ const MockInterview = () => {
                         <ul>{feedback.strengths.map((item, index) => <li key={index}>{item}</li>)}</ul>
                         <h3>Improve next time</h3>
                         <ul>{feedback.improvements.map((item, index) => <li key={index}>{item}</li>)}</ul>
-                        <button className='button primary-button' onClick={continueInterview}>Continue</button>
+                        <button className='button primary-button' onClick={history.length >= MAX_QUESTIONS ? finishInterview : continueInterview}>
+                            {history.length >= MAX_QUESTIONS ? 'View session summary' : 'Continue'}
+                        </button>
+                    </div>
+                ) : finished ? (
+                    <div className='mock-interview__summary'>
+                        <h2>Session complete</h2>
+                        <p className='mock-interview__score'>
+                            {Math.round(history.reduce((total, item) => total + item.feedback.score, 0) / history.length)}
+                            <small>%</small>
+                        </p>
+                        <p>Average score</p>
+                        {sessionDebrief && (
+                            <div className='mock-interview__debrief'>
+                                <h3>Session debrief</h3>
+                                <p>{sessionDebrief.summary}</p>
+                                {sessionDebrief.practicePriorities.length > 0 && (
+                                    <>
+                                        <h3>Practice next</h3>
+                                        <ul>{sessionDebrief.practicePriorities.map((priority, index) => <li key={index}>{priority}</li>)}</ul>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                        <button className='button primary-button' onClick={() => navigate(`/interview/${interviewId}`)}>Review interview plan</button>
                     </div>
                 ) : (
                     <form onSubmit={submitAnswer}>

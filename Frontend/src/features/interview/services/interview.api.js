@@ -62,12 +62,18 @@ export const generateResumePdf = async ({ interviewReportId }) => {
     return response.data
 }
 
-export const evaluateMockAnswer = async ({ interviewId, question, answer, history }) => {
+export const evaluateMockAnswer = async ({ interviewId, question, answer, history, sessionId }) => {
     const response = await api.post(`/api/interview/mock/${interviewId}/answer`, {
         question,
         answer,
-        history
+        history,
+        sessionId
     })
 
     return response.data
+}
+
+export const getMockInterviewSessions = async (interviewId) => {
+    const response = await api.get(`/api/interview/mock/${interviewId}/sessions`)
+    return response.data.sessions
 }

@@ -44,6 +44,13 @@ interviewRouter.post("/resume/pdf/:interviewReportId", authMiddleware.authUser, 
  */
 interviewRouter.post("/mock/:interviewId/answer", authMiddleware.authUser, interviewController.evaluateMockAnswerController)
 
+/**
+ * @route GET /api/interview/mock/:interviewId/sessions
+ * @description get completed mock interview sessions for an interview report.
+ * @access private
+ */
+interviewRouter.get("/mock/:interviewId/sessions", authMiddleware.authUser, interviewController.getMockInterviewSessionsController)
+
 
 
 module.exports = interviewRouter

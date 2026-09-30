@@ -1,6 +1,9 @@
 const pdfParse = require("pdf-parse")
 const { generateInterviewReport, evaluateMockAnswer, generateResumePdf } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
+const mockInterviewSessionModel = require("../models/mockInterviewSession.model")
+
+const MAX_MOCK_QUESTIONS = 5
 
 
 
@@ -142,9 +145,9 @@ async function generateResumePdfController(req, res) {
 
 async function evaluateMockAnswerController(req, res) {
     const { interviewId } = req.params
-    const { question, answer, history } = req.body
+    const { question, answer, history, sessionId } = req.body
 
-    if (!question || !answer || answer.trim().length < 10) {
+    if (typeof question !== "string" || typeof answer !== "string" || answer.trim().length < 10) {
         return res.status(400).json({ message: "Please provide an answer of at least 10 characters." })
     }
 
@@ -154,14 +157,84 @@ async function evaluateMockAnswerController(req, res) {
         return res.status(404).json({ message: "Interview report not found." })
     }
 
+    const previousExchanges = Array.isArray(history)
+        ? history
+            .filter(exchange => typeof exchange?.question === "string" && typeof exchange?.answer === "string")
+            .slice(-MAX_MOCK_QUESTIONS + 1)
+            .map(({ question: previousQuestion, answer: previousAnswer, feedback, score, strengths, improvements }) => ({
+                question: previousQuestion.slice(0, 500),
+                answer: previousAnswer.slice(0, 4000),
+                ...(Number.isFinite(score) && {
+                    score,
+                    feedback: typeof feedback === "string" ? feedback.slice(0, 2000) : "",
+                    strengths: Array.isArray(strengths) ? strengths.filter(item => typeof item === "string").slice(0, 8) : [],
+                    improvements: Array.isArray(improvements) ? improvements.filter(item => typeof item === "string").slice(0, 8) : []
+                })
+            }))
+        : []
+    const askedQuestions = new Set([question, ...previousExchanges.map(exchange => exchange.question)].map(value => value.trim().toLowerCase()))
+    const availableQuestions = [
+        ...(interviewReport.technicalQuestions || []),
+        ...(interviewReport.behavioralQuestions || [])
+    ]
+        .map(item => item.question)
+        .filter(candidate => !askedQuestions.has(candidate.trim().toLowerCase()))
+    const remainingQuestions = Math.max(0, MAX_MOCK_QUESTIONS - previousExchanges.length - 1)
+
     const feedback = await evaluateMockAnswer({
         role: `${interviewReport.title}\n${interviewReport.jobDescription}`,
         question,
         answer,
-        history
+        history: previousExchanges,
+        availableQuestions,
+        remainingQuestions
     })
+
+    if (remainingQuestions === 0 && typeof sessionId === "string" && sessionId.length <= 100) {
+        const answers = [
+            ...previousExchanges.filter(exchange => Number.isFinite(exchange.score)),
+            {
+                question: question.slice(0, 500),
+                answer: answer.slice(0, 4000),
+                score: feedback.score,
+                feedback: feedback.feedback,
+                strengths: feedback.strengths,
+                improvements: feedback.improvements
+            }
+        ]
+        const averageScore = Math.round(answers.reduce((total, item) => total + item.score, 0) / answers.length)
+
+        await mockInterviewSessionModel.findOneAndUpdate(
+            { user: req.user.id, interviewReport: interviewId, sessionId },
+            {
+                $set: {
+                    answers,
+                    averageScore,
+                    summary: feedback.sessionSummary,
+                    practicePriorities: feedback.practicePriorities
+                }
+            },
+            { new: true, upsert: true, runValidators: true }
+        )
+    }
 
     res.status(200).json({ feedback })
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, evaluateMockAnswerController }
+async function getMockInterviewSessionsController(req, res) {
+    const { interviewId } = req.params
+    const interviewReport = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id }).select("_id")
+
+    if (!interviewReport) {
+        return res.status(404).json({ message: "Interview report not found." })
+    }
+
+    const sessions = await mockInterviewSessionModel.find({
+        interviewReport: interviewId,
+        user: req.user.id
+    }).sort({ createdAt: -1 }).select("-__v")
+
+    res.status(200).json({ sessions })
+}
+
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, evaluateMockAnswerController, getMockInterviewSessionsController }

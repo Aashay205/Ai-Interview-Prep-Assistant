@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import '../style/interview.scss'
 import LoadingScreen from '../../../components/LoadingScreen'
 import { useInterview } from '../hooks/useInterview.js'
+import { getMockInterviewSessions } from '../services/interview.api.js'
 import { useNavigate, useParams } from 'react-router'
 
 
@@ -11,6 +12,7 @@ const NAV_ITEMS = [
     { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
     { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
     { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
+    { id: 'sessions', label: 'Past Sessions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></svg>) },
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -64,11 +66,30 @@ const Interview = () => {
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
     const navigate = useNavigate()
+    const [sessions, setSessions] = useState([])
+    const [sessionsLoading, setSessionsLoading] = useState(true)
 
     useEffect(() => {
         if (interviewId) {
             getReportById(interviewId)
         }
+    }, [ interviewId ])
+
+    useEffect(() => {
+        let isCurrent = true
+
+        getMockInterviewSessions(interviewId)
+            .then(data => {
+                if (isCurrent) setSessions(data)
+            })
+            .catch(() => {
+                if (isCurrent) setSessions([])
+            })
+            .finally(() => {
+                if (isCurrent) setSessionsLoading(false)
+            })
+
+        return () => { isCurrent = false }
     }, [ interviewId ])
 
 
@@ -163,6 +184,52 @@ const Interview = () => {
                                     <RoadMapDay key={day.day} day={day} />
                                 ))}
                             </div>
+                        </section>
+                    )}
+
+                    {activeNav === 'sessions' && (
+                        <section>
+                            <div className='content-header'>
+                                <h2>Past Mock Interviews</h2>
+                                <span className='content-header__count'>{sessions.length} sessions</span>
+                            </div>
+                            {sessionsLoading ? (
+                                <p className='session-empty'>Loading saved sessions...</p>
+                            ) : sessions.length === 0 ? (
+                                <p className='session-empty'>Completed mock interviews for this role will appear here.</p>
+                            ) : (
+                                <div className='session-list'>
+                                    {sessions.map((session, sessionIndex) => (
+                                        <details className='session-entry' key={session._id} open={sessionIndex === 0}>
+                                            <summary className='session-entry__summary'>
+                                                <span>
+                                                    <strong>Session {sessions.length - sessionIndex}</strong>
+                                                    <small>{new Date(session.createdAt).toLocaleString()}</small>
+                                                </span>
+                                                <span className='session-entry__score'>{session.averageScore}%</span>
+                                            </summary>
+                                            <div className='session-entry__body'>
+                                                <h3>Session debrief</h3>
+                                                <p>{session.summary}</p>
+                                                {session.practicePriorities?.length > 0 && (
+                                                    <>
+                                                        <h3>Practice next</h3>
+                                                        <ul>{session.practicePriorities.map((priority, index) => <li key={index}>{priority}</li>)}</ul>
+                                                    </>
+                                                )}
+                                                {session.answers.map((item, index) => (
+                                                    <article className='session-answer' key={`${session._id}-${index}`}>
+                                                        <h3>Question {index + 1}<span>{item.score}/100</span></h3>
+                                                        <p className='session-answer__question'>{item.question}</p>
+                                                        <p>{item.answer}</p>
+                                                        <p className='session-answer__feedback'>{item.feedback}</p>
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    ))}
+                                </div>
+                            )}
                         </section>
                     )}
                 </main>

@@ -86,29 +86,37 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
-async function evaluateMockAnswer({ role, question, answer, history }) {
+async function evaluateMockAnswer({ role, question, answer, history = [], availableQuestions = [], remainingQuestions = 0 }) {
     const mockAnswerSchema = z.object({
         score: z.number().min(0).max(100),
         feedback: z.string(),
         strengths: z.array(z.string()),
         improvements: z.array(z.string()),
-        followUpQuestion: z.string()
+        nextQuestion: z.string(),
+        sessionSummary: z.string(),
+        practicePriorities: z.array(z.string())
     })
 
     const prompt = `Act as a fair, demanding interview coach. Evaluate this candidate answer.
 Role and job context: ${role}
 Current question: ${question}
 Candidate answer: ${answer}
-Previous exchange summary: ${history || "This is the first question."}
+Previous exchanges: ${history.length ? JSON.stringify(history) : "This is the first question."}
+Questions remaining after this answer: ${remainingQuestions}
 
 Score the answer for correctness, relevance, clarity, and evidence. Give concise, actionable feedback.
-Ask one natural follow-up question that probes the weakest or most important part of the answer.`
+If questions remain, generate exactly one adaptive follow-up based on the candidate's answer and the previous exchanges. For a vague or incomplete answer, ask for clarification or a concrete example. For a strong answer, probe a deeper implication, tradeoff, or edge case. Do not select a question from the prepared interview plan. Do not repeat the current question or any previous question. If no questions remain after this answer, set nextQuestion to an empty string.`
+
+    const finalTurnInstructions = remainingQuestions === 0
+        ? `This is the final answer in the session. Based on the entire exchange history, write a concise overall sessionSummary and 2-4 specific practicePriorities.`
+        : `This is not the final answer. Set sessionSummary to an empty string and practicePriorities to an empty array.`
+    const fullPrompt = `${prompt}\n${finalTurnInstructions}`
 
     // Use retry logic to handle API rate limiting
     const response = await retryWithBackoff(async () => {
         return await ai.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: prompt,
+            contents: fullPrompt,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: zodToJsonSchema(mockAnswerSchema),
@@ -116,7 +124,30 @@ Ask one natural follow-up question that probes the weakest or most important par
         })
     }, 3, 2000) // 3 retries with 2 second initial delay
 
-    return JSON.parse(response.text)
+    const result = JSON.parse(response.text)
+    result.sessionSummary ||= "Review the feedback from each answer and focus on the listed practice priorities."
+    result.practicePriorities ||= []
+    const normalizeQuestion = value => value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+    const askedQuestions = new Set([question, ...history.map(exchange => exchange.question)].map(normalizeQuestion))
+    const nextQuestionKey = normalizeQuestion(result.nextQuestion || "")
+    const preparedQuestionKeys = new Set(availableQuestions.map(normalizeQuestion))
+
+    if (remainingQuestions > 0 && (
+        !nextQuestionKey
+        || askedQuestions.has(nextQuestionKey)
+        || preparedQuestionKeys.has(nextQuestionKey)
+    )) {
+        const answerExcerpt = answer.trim().replace(/\s+/g, " ").replace(/[“”"]/g, "'").slice(0, 120)
+        const followUps = [
+            `You mentioned "${answerExcerpt}". What led you to choose that approach?`,
+            `You mentioned "${answerExcerpt}". What edge case could challenge that approach, and how would you handle it?`,
+            `You mentioned "${answerExcerpt}". How would you verify that your approach worked as intended?`,
+            `You mentioned "${answerExcerpt}". What trade-off did you consider, and why was it acceptable?`
+        ]
+        result.nextQuestion = followUps[history.length % followUps.length]
+    }
+
+    return result
 }
 
 
