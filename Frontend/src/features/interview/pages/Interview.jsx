@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import '../style/interview.scss'
 import LoadingScreen from '../../../components/LoadingScreen'
 import { useInterview } from '../hooks/useInterview.js'
-import { getMockInterviewSessions } from '../services/interview.api.js'
+import { getMockInterviewSessions, requestStudyResources } from '../services/interview.api.js'
 import { useNavigate, useParams } from 'react-router'
 
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
     { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
     { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
     { id: 'sessions', label: 'Past Sessions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></svg>) },
+    { id: 'resources', label: 'Study Resources', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>) },
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -68,6 +69,26 @@ const Interview = () => {
     const navigate = useNavigate()
     const [sessions, setSessions] = useState([])
     const [sessionsLoading, setSessionsLoading] = useState(true)
+    const [studyResources, setStudyResources] = useState([])
+    const [resourcesLoading, setResourcesLoading] = useState(false)
+    const [resourcesError, setResourcesError] = useState('')
+
+    const handleLoadStudyResources = async () => {
+        if (!interviewId) return
+
+        setResourcesLoading(true)
+        setResourcesError('')
+
+        try {
+            const data = await requestStudyResources(interviewId, studyResources.length > 0)
+            setStudyResources(data.studyResources || [])
+        } catch (error) {
+            setStudyResources([])
+            setResourcesError(error.response?.data?.message || 'Unable to load study resources right now.')
+        } finally {
+            setResourcesLoading(false)
+        }
+    }
 
     useEffect(() => {
         if (interviewId) {
@@ -229,6 +250,56 @@ const Interview = () => {
                                         </details>
                                     ))}
                                 </div>
+                            )}
+                        </section>
+                    )}
+
+                    {activeNav === 'resources' && (
+                        <section className='study-resources-view'>
+                            <div className='content-header'>
+                                <div>
+                                    <h2>Study Resources</h2>
+                                    <p className='study-resources-view__subtitle'>Focused material for the skills you can strengthen for this role.</p>
+                                </div>
+                                <button
+                                    className='button primary-button study-resources-view__action'
+                                    onClick={handleLoadStudyResources}
+                                    disabled={resourcesLoading}
+                                >
+                                    {resourcesLoading ? 'Finding resources...' : studyResources.length ? 'Reload resources' : 'Find resources'}
+                                </button>
+                            </div>
+
+                            {resourcesError && <p className='resource-panel__error'>{resourcesError}</p>}
+                            {resourcesLoading ? (
+                                <p className='session-empty'>Finding study resources for your skill gaps...</p>
+                            ) : studyResources.length > 0 ? (
+                                <div className='resource-panel__list'>
+                                    {studyResources.map((resource, index) => {
+                                        const resourceType = (resource.type || 'resource').toString().toUpperCase()
+                                        const resourceDifficulty = (resource.difficulty || 'beginner').toString().toUpperCase()
+
+                                        return (
+                                            <a
+                                                key={`${resource.title}-${index}`}
+                                                href={resource.link}
+                                                target='_blank'
+                                                rel='noreferrer noopener'
+                                                className='resource-item'
+                                            >
+                                                <div className='resource-item__top'>
+                                                    <span className='resource-item__badge'>{resourceType}</span>
+                                                    <span className='resource-item__difficulty'>{resourceDifficulty}</span>
+                                                </div>
+                                                <strong>{resource.title}</strong>
+                                                <p>{resource.reason}</p>
+                                                <small>{resource.skill}</small>
+                                            </a>
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <p className='session-empty'>Select “Find resources” to get recommendations based on your skill gaps.</p>
                             )}
                         </section>
                     )}

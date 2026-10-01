@@ -64,6 +64,41 @@ const preparationPlanSchema = new mongoose.Schema({
     } ]
 })
 
+const studyResourceSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: [ true, "Resource title is required" ]
+    },
+    skill: {
+        type: String,
+        required: [ true, "Skill is required" ]
+    },
+    type: {
+        type: String,
+        enum: [ "article", "video", "course", "practice", "book", "documentation" ],
+        required: [ true, "Resource type is required" ]
+    },
+    difficulty: {
+        type: String,
+        enum: [ "beginner", "intermediate", "advanced" ],
+        required: [ true, "Difficulty is required" ]
+    },
+    reason: {
+        type: String,
+        required: [ true, "Reason is required" ]
+    },
+    link: {
+        type: String,
+        required: [ true, "Resource link is required" ]
+    },
+    source: {
+        type: String,
+        default: "AI Recommended"
+    }
+}, {
+    _id: false
+})
+
 const interviewReportSchema = new mongoose.Schema({
     jobDescription: {
         type: String,
@@ -84,6 +119,7 @@ const interviewReportSchema = new mongoose.Schema({
     behavioralQuestions: [ behavioralQuestionSchema ],
     skillGaps: [ skillGapSchema ],
     preparationPlan: [ preparationPlanSchema ],
+    studyResources: [ studyResourceSchema ],
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"

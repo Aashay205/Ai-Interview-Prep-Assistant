@@ -51,6 +51,18 @@ interviewRouter.post("/mock/:interviewId/answer", authMiddleware.authUser, inter
  */
 interviewRouter.get("/mock/:interviewId/sessions", authMiddleware.authUser, interviewController.getMockInterviewSessionsController)
 
+/**
+ * @route GET /api/interview/report/:interviewId/resources
+ * @description fetch saved study resources for an interview report.
+ * @access private
+ */
+interviewRouter.get("/report/:interviewId/resources", authMiddleware.authUser, interviewController.getStudyResourcesController)
 
+/**
+ * @route POST /api/interview/report/:interviewId/resources
+ * @description generate or refresh study resources based on skill gaps for an interview report.
+ * @access private
+ */
+interviewRouter.post("/report/:interviewId/resources", authMiddleware.authUser, interviewController.generateStudyResourcesController)
 
 module.exports = interviewRouter

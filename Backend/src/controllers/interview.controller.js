@@ -1,5 +1,5 @@
 const pdfParse = require("pdf-parse")
-const { generateInterviewReport, evaluateMockAnswer, generateResumePdf } = require("../services/ai.service")
+const { generateInterviewReport, generateStudyResources, evaluateMockAnswer, generateResumePdf } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
 const mockInterviewSessionModel = require("../models/mockInterviewSession.model")
 
@@ -237,4 +237,54 @@ async function getMockInterviewSessionsController(req, res) {
     res.status(200).json({ sessions })
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, evaluateMockAnswerController, getMockInterviewSessionsController }
+async function getStudyResourcesController(req, res) {
+    const { interviewId } = req.params
+
+    const interviewReport = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+
+    if (!interviewReport) {
+        return res.status(404).json({ message: "Interview report not found." })
+    }
+
+    return res.status(200).json({
+        message: "Study resources fetched successfully.",
+        studyResources: interviewReport.studyResources || []
+    })
+}
+
+async function generateStudyResourcesController(req, res) {
+    const { interviewId } = req.params
+    const interviewReport = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+
+    if (!interviewReport) {
+        return res.status(404).json({ message: "Interview report not found." })
+    }
+
+    const hasSavedResources = Array.isArray(interviewReport.studyResources) && interviewReport.studyResources.length > 0
+    const shouldRefresh = req.body?.refresh === true
+
+    if (hasSavedResources && !shouldRefresh) {
+        return res.status(200).json({
+            message: "Saved study resources fetched successfully.",
+            studyResources: interviewReport.studyResources
+        })
+    }
+
+    const skillGaps = Array.isArray(interviewReport.skillGaps)
+        ? interviewReport.skillGaps.map(({ skill, severity }) => ({ skill, severity }))
+        : []
+    const studyResources = await generateStudyResources({
+        jobTitle: interviewReport.title,
+        skillGaps
+    })
+
+    interviewReport.studyResources = studyResources
+    await interviewReport.save()
+
+    return res.status(200).json({
+        message: shouldRefresh ? "Study resources refreshed successfully." : "Study resources generated successfully.",
+        studyResources
+    })
+}
+
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, evaluateMockAnswerController, getMockInterviewSessionsController, getStudyResourcesController, generateStudyResourcesController }

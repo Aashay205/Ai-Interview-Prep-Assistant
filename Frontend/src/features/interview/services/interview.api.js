@@ -77,3 +77,8 @@ export const getMockInterviewSessions = async (interviewId) => {
     const response = await api.get(`/api/interview/mock/${interviewId}/sessions`)
     return response.data.sessions
 }
+
+export const requestStudyResources = async (interviewId, refresh = false) => {
+    const response = await api.post(`/api/interview/report/${interviewId}/resources`, { refresh })
+    return response.data
+}

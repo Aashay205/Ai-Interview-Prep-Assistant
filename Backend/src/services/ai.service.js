@@ -86,6 +86,83 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
+function parseStructuredJson(text) {
+    if (!text || typeof text !== "string") return {}
+
+    const trimmed = text.trim()
+    const withoutFence = trimmed.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "")
+
+    try {
+        return JSON.parse(withoutFence)
+    } catch (error) {
+        const firstBrace = withoutFence.indexOf("{")
+        const lastBrace = withoutFence.lastIndexOf("}")
+
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            try {
+                return JSON.parse(withoutFence.slice(firstBrace, lastBrace + 1))
+            } catch (innerError) {
+                return {}
+            }
+        }
+
+        return {}
+    }
+}
+
+async function generateStudyResources({ jobTitle, skillGaps = [] }) {
+    const studyResourceSchema = z.object({
+        studyResources: z.array(z.object({
+            title: z.string(),
+            skill: z.string(),
+            type: z.enum(["article", "video", "course", "practice", "book", "documentation"]),
+            difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+            reason: z.string(),
+            link: z.string(),
+            source: z.string().optional().default("AI Recommended")
+        })).min(1).max(6)
+    })
+
+    if (!Array.isArray(skillGaps) || skillGaps.length === 0) {
+        return []
+    }
+
+    const prompt = `You are helping a candidate improve for the role: ${jobTitle}. Generate a short, practical list of study resources for the following skill gaps. Return ONLY valid JSON with a top-level object {"studyResources": [...]}. Each resource must have these keys: title, skill, type, difficulty, reason, link, source. Be careful to recommend only well-known, real learning resources that actually exist. Prefer a mix of tutorials, practice sets, and interview-focused resources. Keep the list to 3-5 resources total and focus on the highest-priority gaps first. Skill gaps: ${JSON.stringify(skillGaps, null, 2)}`
+
+    const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: zodToJsonSchema(studyResourceSchema),
+            }
+        })
+    }, 3, 2000)
+
+    const result = parseStructuredJson(response.text)
+    const rawResources = Array.isArray(result.studyResources)
+        ? result.studyResources
+        : Array.isArray(result.resources)
+            ? result.resources
+            : Array.isArray(result.items)
+                ? result.items
+                : []
+
+    return rawResources
+        .filter((item) => item && typeof item === "object")
+        .map((item) => ({
+            title: String(item.title || "Untitled resource").trim(),
+            skill: String(item.skill || "General learning").trim(),
+            type: String(item.type || "article").trim().toLowerCase(),
+            difficulty: String(item.difficulty || "beginner").trim().toLowerCase(),
+            reason: String(item.reason || "Useful for improving this skill.").trim(),
+            link: String(item.link || "").trim(),
+            source: String(item.source || "AI Recommended").trim()
+        }))
+        .filter((item) => item.title && item.link)
+}
+
 async function evaluateMockAnswer({ role, question, answer, history = [], availableQuestions = [], remainingQuestions = 0 }) {
     const mockAnswerSchema = z.object({
         score: z.number().min(0).max(100),
@@ -384,4 +461,4 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
 }
 
-module.exports = { generateInterviewReport, evaluateMockAnswer, generateResumePdf }
+module.exports = { generateInterviewReport, generateStudyResources, evaluateMockAnswer, generateResumePdf }

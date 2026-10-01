@@ -19,6 +19,12 @@
         color: white;
     }
 
+    &.secondary-button{
+        background-color: rgba(255, 45, 120, 0.08);
+        border: 1px solid rgba(255, 45, 120, 0.35);
+        color: #ff9abc;
+    }
+
     &:active{
         transform: scale(0.9);
     }
