@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router'
 import "../auth.form.scss"
 import { useAuth } from '../hooks/useAuth'
 import LoadingScreen from '../../../components/LoadingScreen'
+import PrepwiseBrand from '../../../components/PrepwiseBrand'
 
 const Login = () => {
 
@@ -18,7 +19,7 @@ const Login = () => {
         setError("")
         try {
             await handleLogin({ email, password })
-            navigate('/')
+            navigate('/workspace')
         } catch (loginError) {
             setError(loginError.response?.data?.message || "Unable to log in. Check your connection and try again.")
         }
@@ -33,7 +34,7 @@ const Login = () => {
         <main className="auth-page">
             <div className="auth-shell">
                 <section className="auth-intro">
-                    <span className="auth-kicker">AI INTERVIEW PREP</span>
+                    <PrepwiseBrand />
                     <h1>Walk into your next interview <span>prepared.</span></h1>
                     <p>Build a focused interview plan, practice with AI, and turn every answer into progress.</p>
                     <div className="auth-stat"><strong>Personalized practice</strong><span>Built around your goals and experience.</span></div>

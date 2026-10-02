@@ -4,6 +4,7 @@ import LoadingScreen from '../../../components/LoadingScreen'
 import { useInterview } from '../hooks/useInterview.js'
 import { getMockInterviewSessions, requestStudyResources } from '../services/interview.api.js'
 import { useNavigate, useParams } from 'react-router'
+import PrepwiseBrand from '../../../components/PrepwiseBrand'
 
 
 
@@ -127,12 +128,13 @@ const Interview = () => {
     return (
         <div className='interview-page'>
             <div className='interview-top'>
-                <header className='page-header'>
+            <PrepwiseBrand />
+            <header className='page-header'>
                     <div>
                         <h1>{report.title || 'Interview Plan'}</h1>
                         <p>Review your personalized interview plan and practice questions.</p>
                     </div>
-                        <button className='interview-back-button' onClick={() => navigate('/') }>
+                        <button className='interview-back-button' onClick={() => navigate('/workspace') }>
                             <span aria-hidden='true'>&larr;</span> Back to create plan
                     </button>
                 </header>

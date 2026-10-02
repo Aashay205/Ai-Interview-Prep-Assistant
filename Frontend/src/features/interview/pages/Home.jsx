@@ -4,6 +4,7 @@ import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/hooks/useAuth'
 import LoadingScreen from '../../../components/LoadingScreen'
+import PrepwiseBrand from '../../../components/PrepwiseBrand'
 
 const Home = () => {
 
@@ -47,6 +48,7 @@ const Home = () => {
 
     return (
         <div className='home-page' style={{ position: 'relative' }}>
+            <PrepwiseBrand className='prepwise-brand--home' />
 
             <button
                 onClick={async () => {

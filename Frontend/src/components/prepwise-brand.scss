@@ -1,0 +1,48 @@
+.prepwise-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: #f4eff1;
+    font-size: 1.08rem;
+    font-weight: 750;
+    letter-spacing: -0.055em;
+    text-decoration: none;
+}
+
+.prepwise-brand__accent { color: #ff5c91; }
+
+.prepwise-brand__mark {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 22px;
+
+    span {
+        width: 5px;
+        height: 11px;
+        border-radius: 3px;
+        background: #ff5c91;
+        transform-origin: bottom;
+        animation: prepwise-brand-bars 1.5s ease-in-out infinite;
+
+        &:nth-child(2) { height: 19px; animation-delay: 0.16s; }
+        &:nth-child(3) { height: 14px; animation-delay: 0.32s; }
+    }
+}
+
+.prepwise-brand--home {
+    position: absolute;
+    top: 1.35rem;
+    left: max(1rem, 4vw);
+}
+
+@keyframes prepwise-brand-bars {
+    0%, 100% { transform: scaleY(0.78); opacity: 0.7; }
+    50% { transform: scaleY(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .prepwise-brand__mark span {
+        animation: none;
+    }
+}

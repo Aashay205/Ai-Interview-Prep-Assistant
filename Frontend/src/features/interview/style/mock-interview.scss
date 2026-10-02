@@ -14,9 +14,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     margin-bottom: clamp(2rem, 5vw, 3.5rem);
     color: #a8a5aa;
 }
+
+.mock-interview__header > .prepwise-brand { flex: 0 0 auto; }
 
 .mock-interview__back {
     border: 0;
@@ -116,6 +119,7 @@
     .mock-interview { padding: 1.25rem 1rem 2rem; }
     .mock-interview__header { margin-bottom: 2.5rem; }
     .mock-interview__header { align-items: flex-start; gap: 1rem; }
+    .mock-interview__header > .prepwise-brand { font-size: 0.95rem; }
     .mock-interview__status { font-size: 0.68rem; }
     .mock-interview__progress-row { align-items: start; flex-direction: column; gap: 1.25rem; }
     .mock-interview__form-footer { align-items: stretch; flex-direction: column; }

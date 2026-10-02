@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { getInterviewReportById, evaluateMockAnswer } from '../services/interview.api'
 import '../style/mock-interview.scss'
 import LoadingScreen from '../../../components/LoadingScreen'
+import PrepwiseBrand from '../../../components/PrepwiseBrand'
 
 const MAX_QUESTIONS = 5
 
@@ -117,6 +118,7 @@ const MockInterview = () => {
         <main className='mock-interview'>
             <div className='mock-interview__shell'>
                 <header className='mock-interview__header'>
+                    <PrepwiseBrand />
                     <button className='mock-interview__back' onClick={() => navigate(`/interview/${interviewId}`)}>
                         <span aria-hidden='true'>&larr;</span> Back to plan
                     </button>
